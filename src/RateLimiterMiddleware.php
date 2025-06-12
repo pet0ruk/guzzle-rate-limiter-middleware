@@ -14,8 +14,14 @@ class RateLimiterMiddleware
         $this->rateLimiter = $rateLimiter;
     }
 
-    public static function perSecond(int $limit, ?Store $store = null, ?Deferrer $deferrer = null): RateLimiterMiddleware
+    /**
+     * @param int|float $limit
+     */
+    public static function perSecond(int|float $limit, ?Store $store = null, ?Deferrer $deferrer = null): RateLimiterMiddleware
     {
+        if (!is_numeric($limit) || $limit <= 0) {
+            throw new \InvalidArgumentException('Limit must be a positive number.');
+        }
         $rateLimiter = new RateLimiter(
             $limit,
             RateLimiter::TIME_FRAME_SECOND,

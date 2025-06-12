@@ -7,7 +7,7 @@ class RateLimiter
     const TIME_FRAME_MINUTE = 'minute';
     const TIME_FRAME_SECOND = 'second';
 
-    /** @var int */
+    /** @var int|float */
     protected $limit;
 
     /** @var string */
@@ -19,12 +19,18 @@ class RateLimiter
     /** @var \Spatie\GuzzleRateLimiterMiddleware\Deferrer */
     protected $deferrer;
 
+    /**
+     * @param int|float $limit
+     */
     public function __construct(
-        int $limit,
+        int|float $limit,
         string $timeFrame,
         Store $store,
         Deferrer $deferrer
     ) {
+        if (!is_numeric($limit) || $limit <= 0) {
+            throw new \InvalidArgumentException('Limit must be a positive number.');
+        }
         $this->limit = $limit;
         $this->timeFrame = $timeFrame;
         $this->store = $store;
@@ -49,6 +55,22 @@ class RateLimiter
 
     protected function delayUntilNextRequest(): int
     {
+        // For float rates < 1, enforce a minimum interval between requests
+        if ($this->timeFrame === self::TIME_FRAME_SECOND && $this->limit < 1) {
+            $minIntervalMs = (int) round(1000 / $this->limit);
+            $timestamps = $this->store->get();
+            if (empty($timestamps)) {
+                return 0;
+            }
+            $lastRequestTime = end($timestamps);
+            $elapsed = $this->deferrer->getCurrentTime() - $lastRequestTime;
+            if ($elapsed >= $minIntervalMs) {
+                return 0;
+            }
+            return $minIntervalMs - $elapsed;
+        }
+
+        // Default logic for limit >= 1
         $currentTimeFrameStart = $this->deferrer->getCurrentTime() - $this->timeFrameLengthInMilliseconds();
 
         $requestsInCurrentTimeFrame = array_values(array_filter(

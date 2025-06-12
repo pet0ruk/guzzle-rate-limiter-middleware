@@ -135,4 +135,30 @@ class RateLimiterTest extends TestCase
 
         $this->assertEquals(60000, $this->deferrer->getCurrentTime());
     }
+
+    /** @test */
+    public function it_handles_float_rate_limits_per_second()
+    {
+        // 0.2 req/sec = 1 request every 5000 ms
+        $rateLimiter = $this->createRateLimiter(0.2, \Spatie\GuzzleRateLimiterMiddleware\RateLimiter::TIME_FRAME_SECOND);
+
+        $this->assertEquals(0, $this->deferrer->getCurrentTime());
+
+        $rateLimiter->handle(function () {
+            // no sleep
+        });
+        $this->assertEquals(0, $this->deferrer->getCurrentTime());
+
+        // Next request should be deferred by 5000 ms
+        $rateLimiter->handle(function () {
+            // no sleep
+        });
+        $this->assertEquals(5000, $this->deferrer->getCurrentTime());
+
+        // Next request should be deferred by another 5000 ms
+        $rateLimiter->handle(function () {
+            // no sleep
+        });
+        $this->assertEquals(10000, $this->deferrer->getCurrentTime());
+    }
 }

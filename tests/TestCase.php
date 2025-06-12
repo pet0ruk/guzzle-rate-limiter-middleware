@@ -18,7 +18,7 @@ abstract class TestCase extends BaseTestCase
         $this->deferrer = new TestDeferrer();
     }
 
-    public function createRateLimiter(int $limit, string $timeFrame): RateLimiter
+    public function createRateLimiter(int|float $limit, string $timeFrame): RateLimiter
     {
         return new RateLimiter($limit, $timeFrame, new InMemoryStore(), $this->deferrer);
     }
